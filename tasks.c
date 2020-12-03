@@ -121,12 +121,14 @@
 
 /* uxTopReadyPriority holds the priority of the highest priority ready
  * state task. */
-    #define taskRECORD_READY_PRIORITY( uxPriority ) \
-    {                                               \
-        if( ( uxPriority ) > uxTopReadyPriority )   \
-        {                                           \
-            uxTopReadyPriority = ( uxPriority );    \
-        }                                           \
+    #define taskRECORD_READY_PRIORITY( uxPriority )                \
+    {                                                              \
+        /* Top priority should not exceed configMAX_PRIORITIES. */ \
+        configASSERT( uxPriority < configMAX_PRIORITIES );         \
+        if( ( uxPriority ) > uxTopReadyPriority )                  \
+        {                                                          \
+            uxTopReadyPriority = ( uxPriority );                   \
+        }                                                          \
     } /* taskRECORD_READY_PRIORITY */
 
 /*-----------------------------------------------------------*/
@@ -135,6 +137,8 @@
     {                                                                         \
         UBaseType_t uxTopPriority = uxTopReadyPriority;                       \
                                                                               \
+        /* Top priority should not exceed configMAX_PRIORITIES. */            \
+        configASSERT( uxTopPriority < configMAX_PRIORITIES );                 \
         /* Find the highest priority queue that contains ready tasks. */      \
         while( listLIST_IS_EMPTY( &( pxReadyTasksLists[ uxTopPriority ] ) ) ) \
         {                                                                     \
