@@ -132,11 +132,16 @@ portSTACK_TYPE * pxPortInitialiseStack( portSTACK_TYPE * pxTopOfStack,
     size_t ulStackSize;
     int iRet;
 
+    portSTACK_TYPE * original_end;
+
     ( void ) pthread_once( &hSigSetupThread, prvSetupSignalsAndSchedulerPolicy );
 
     /*
      * Store the additional thread data at the start of the stack.
      */
+    ulStackSize = ( pxTopOfStack + 1 - pxEndOfStack ) * sizeof( *pxTopOfStack );
+    original_end = pxEndOfStack - ( PTHREAD_STACK_MIN - ulStackSize );
+
     thread = ( Thread_t * ) ( pxTopOfStack + 1 ) - 1;
     pxTopOfStack = ( portSTACK_TYPE * ) thread - 1;
     ulStackSize = ( pxTopOfStack + 1 - pxEndOfStack ) * sizeof( *pxTopOfStack );
@@ -149,9 +154,12 @@ portSTACK_TYPE * pxPortInitialiseStack( portSTACK_TYPE * pxTopOfStack,
 
     if( ulStackSize < PTHREAD_STACK_MIN )
     {
-        portSTACK_TYPE * original_end;
-        original_end = pxEndOfStack - ( PTHREAD_STACK_MIN + ulStackSize );
-        pthread_attr_setstack( &xThreadAttributes, original_end, PTHREAD_STACK_MIN );
+        iRet = pthread_attr_setstack( &xThreadAttributes, original_end, PTHREAD_STACK_MIN );
+
+        if( iRet )
+        {
+            prvFatalError( "pthread_create", iRet );
+        }
     }
     else
     {

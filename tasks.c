@@ -764,7 +764,7 @@ static void prvAddNewTaskToReadyList( TCB_t * pxNewTCB ) PRIVILEGED_FUNCTION;
                 StackType_t * pxStack;
 
                 /* Allocate space for the stack used by the task being created. */
-                if( usStackDepth < PTHREAD_STACK_MIN )
+                if( usStackDepth * sizeof( StackType_t ) < PTHREAD_STACK_MIN )
                 {
                     pxStack = pvPortMalloc( ( ( ( size_t ) PTHREAD_STACK_MIN ) * sizeof( StackType_t ) ) ); /*lint !e9079 All values returned by pvPortMalloc() have at least the alignment required by the MCU's stack and this allocation is the stack. */
                 }
@@ -781,10 +781,10 @@ static void prvAddNewTaskToReadyList( TCB_t * pxNewTCB ) PRIVILEGED_FUNCTION;
                     if( pxNewTCB != NULL )
                     {
                         /* Store the stack location in the TCB. */
-                        if( usStackDepth < PTHREAD_STACK_MIN )
+                        if( usStackDepth * sizeof( StackType_t ) < PTHREAD_STACK_MIN )
                         {
                             pxNewTCB->pxStack =
-                                pxStack + ( PTHREAD_STACK_MIN - usStackDepth );
+                                pxStack + ( PTHREAD_STACK_MIN - ( usStackDepth * sizeof( StackType_t ) ) );
                         }
                         else
                         {
@@ -2969,7 +2969,6 @@ BaseType_t xTaskIncrementTick( void )
 
     TaskHookFunction_t xTaskGetApplicationTaskTagFromISR( TaskHandle_t xTask )
     {
-        {
             TCB_t * pxTCB;
             TaskHookFunction_t xReturn;
             UBaseType_t uxSavedInterruptStatus;
@@ -3969,7 +3968,9 @@ static void prvCheckTasksWaitingTermination( void )
                  * the stack and TCB. */
                 if ((pxTCB->pxEndOfStack - pxTCB->pxStack ) < PTHREAD_STACK_MIN)
                 {
-                    pxTCB->pxStack = pxTCB->pxStack - ( PTHREAD_STACK_MIN + pxTCB->pxEndOfStack - pxTCB->pxStack );
+                    StackType_t ulStackSize;
+                    ulStackSize = ( pxTCB->pxEndOfStack + 1 - pxTCB->pxStack ) * sizeof( *pxTCB->pxEndOfStack );
+                    pxTCB->pxStack = pxTCB->pxStack - ( PTHREAD_STACK_MIN - ulStackSize );
                 }
                 vPortFree( pxTCB->pxStack );
                 vPortFree( pxTCB );
@@ -3985,7 +3986,9 @@ static void prvCheckTasksWaitingTermination( void )
                      * must be freed. */
                     if ((pxTCB->pxEndOfStack - pxTCB->pxStack ) < PTHREAD_STACK_MIN)
                     {
-                        pxTCB->pxStack = pxTCB->pxStack - ( PTHREAD_STACK_MIN + pxTCB->pxEndOfStack - pxTCB->pxStack );
+                        StackType_t ulStackSize;
+                        ulStackSize = ( pxTCB->pxEndOfStack + 1 - pxTCB->pxStack ) * sizeof( *pxTCB->pxEndOfStack );
+                        pxTCB->pxStack = pxTCB->pxStack - ( PTHREAD_STACK_MIN - ulStackSize );
                     }
                     vPortFree( pxTCB->pxStack );
                     vPortFree( pxTCB );
