@@ -27,6 +27,7 @@
 /* Standard includes. */
 #include <stdlib.h>
 #include <string.h>
+#include <bits/local_lim.h>
 
 /* Defining MPU_WRAPPERS_INCLUDED_FROM_API_FILE prevents task.h from redefining
  * all the API functions to use the MPU wrappers.  That should only be done when
@@ -763,7 +764,14 @@ static void prvAddNewTaskToReadyList( TCB_t * pxNewTCB ) PRIVILEGED_FUNCTION;
                 StackType_t * pxStack;
 
                 /* Allocate space for the stack used by the task being created. */
-                pxStack = pvPortMalloc( ( ( ( size_t ) usStackDepth ) * sizeof( StackType_t ) ) ); /*lint !e9079 All values returned by pvPortMalloc() have at least the alignment required by the MCU's stack and this allocation is the stack. */
+                if( usStackDepth < PTHREAD_STACK_MIN )
+                {
+                    pxStack = pvPortMalloc( ( ( ( size_t ) PTHREAD_STACK_MIN ) * sizeof( StackType_t ) ) ); /*lint !e9079 All values returned by pvPortMalloc() have at least the alignment required by the MCU's stack and this allocation is the stack. */
+                }
+                else
+                {
+                    pxStack = pvPortMalloc( ( ( ( size_t ) usStackDepth ) * sizeof( StackType_t ) ) ); /*lint !e9079 All values returned by pvPortMalloc() have at least the alignment required by the MCU's stack and this allocation is the stack. */
+                }
 
                 if( pxStack != NULL )
                 {
@@ -773,7 +781,15 @@ static void prvAddNewTaskToReadyList( TCB_t * pxNewTCB ) PRIVILEGED_FUNCTION;
                     if( pxNewTCB != NULL )
                     {
                         /* Store the stack location in the TCB. */
-                        pxNewTCB->pxStack = pxStack;
+                        if( usStackDepth  < PTHREAD_STACK_MIN )
+                        {
+                            pxNewTCB->pxStack =
+                                   pxStack + (PTHREAD_STACK_MIN - usStackDepth);
+                        }
+                        else
+                        {
+                            pxNewTCB->pxStack = pxStack;
+                        }
                     }
                     else
                     {
@@ -2953,23 +2969,24 @@ BaseType_t xTaskIncrementTick( void )
 
     TaskHookFunction_t xTaskGetApplicationTaskTagFromISR( TaskHandle_t xTask )
     {
-        TCB_t * pxTCB;
-        TaskHookFunction_t xReturn;
-        UBaseType_t uxSavedInterruptStatus;
-
-        /* If xTask is NULL then set the calling task's hook. */
-        pxTCB = prvGetTCBFromHandle( xTask );
-
-        /* Save the hook function in the TCB.  A critical section is required as
-         * the value can be accessed from an interrupt. */
-        uxSavedInterruptStatus = portSET_INTERRUPT_MASK_FROM_ISR();
         {
-            xReturn = pxTCB->pxTaskTag;
-        }
-        portCLEAR_INTERRUPT_MASK_FROM_ISR( uxSavedInterruptStatus );
+            TCB_t * pxTCB;
+            TaskHookFunction_t xReturn;
+            UBaseType_t uxSavedInterruptStatus;
 
-        return xReturn;
-    }
+            /* If xTask is NULL then set the calling task's hook. */
+            pxTCB = prvGetTCBFromHandle( xTask );
+
+            /* Save the hook function in the TCB.  A critical section is required as
+             * the value can be accessed from an interrupt. */
+            uxSavedInterruptStatus = portSET_INTERRUPT_MASK_FROM_ISR();
+            {
+                xReturn = pxTCB->pxTaskTag;
+            }
+            portCLEAR_INTERRUPT_MASK_FROM_ISR( uxSavedInterruptStatus );
+
+            return xReturn;
+        }
 
 #endif /* configUSE_APPLICATION_TASK_TAG */
 /*-----------------------------------------------------------*/
@@ -3950,6 +3967,10 @@ static void prvCheckTasksWaitingTermination( void )
             {
                 /* The task can only have been allocated dynamically - free both
                  * the stack and TCB. */
+                if ((pxTCB->pxEndOfStack - pxTCB->pxStack ) < PTHREAD_STACK_MIN)
+                {
+                    pxTCB->pxStack = pxTCB->pxStack - ( PTHREAD_STACK_MIN + pxTCB->pxEndOfStack - pxTCB->pxStack )
+                }
                 vPortFree( pxTCB->pxStack );
                 vPortFree( pxTCB );
             }
@@ -5392,4 +5413,5 @@ static void prvAddCurrentTaskToDelayedList( TickType_t xTicksToWait,
         }
     #endif
 
+#endif /* if ( configINCLUDE_FREERTOS_TASK_C_ADDITIONS_H == 1 ) */
 #endif /* if ( configINCLUDE_FREERTOS_TASK_C_ADDITIONS_H == 1 ) */
