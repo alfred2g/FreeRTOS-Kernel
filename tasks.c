@@ -781,10 +781,10 @@ static void prvAddNewTaskToReadyList( TCB_t * pxNewTCB ) PRIVILEGED_FUNCTION;
                     if( pxNewTCB != NULL )
                     {
                         /* Store the stack location in the TCB. */
-                        if( usStackDepth  < PTHREAD_STACK_MIN )
+                        if( usStackDepth < PTHREAD_STACK_MIN )
                         {
                             pxNewTCB->pxStack =
-                                   pxStack + (PTHREAD_STACK_MIN - usStackDepth);
+                                pxStack + ( PTHREAD_STACK_MIN - usStackDepth );
                         }
                         else
                         {
@@ -3969,7 +3969,7 @@ static void prvCheckTasksWaitingTermination( void )
                  * the stack and TCB. */
                 if ((pxTCB->pxEndOfStack - pxTCB->pxStack ) < PTHREAD_STACK_MIN)
                 {
-                    pxTCB->pxStack = pxTCB->pxStack - ( PTHREAD_STACK_MIN + pxTCB->pxEndOfStack - pxTCB->pxStack )
+                    pxTCB->pxStack = pxTCB->pxStack - ( PTHREAD_STACK_MIN + pxTCB->pxEndOfStack - pxTCB->pxStack );
                 }
                 vPortFree( pxTCB->pxStack );
                 vPortFree( pxTCB );
@@ -3983,6 +3983,10 @@ static void prvCheckTasksWaitingTermination( void )
                 {
                     /* Both the stack and TCB were allocated dynamically, so both
                      * must be freed. */
+                    if ((pxTCB->pxEndOfStack - pxTCB->pxStack ) < PTHREAD_STACK_MIN)
+                    {
+                        pxTCB->pxStack = pxTCB->pxStack - ( PTHREAD_STACK_MIN + pxTCB->pxEndOfStack - pxTCB->pxStack );
+                    }
                     vPortFree( pxTCB->pxStack );
                     vPortFree( pxTCB );
                 }
@@ -5413,5 +5417,4 @@ static void prvAddCurrentTaskToDelayedList( TickType_t xTicksToWait,
         }
     #endif
 
-#endif /* if ( configINCLUDE_FREERTOS_TASK_C_ADDITIONS_H == 1 ) */
 #endif /* if ( configINCLUDE_FREERTOS_TASK_C_ADDITIONS_H == 1 ) */
